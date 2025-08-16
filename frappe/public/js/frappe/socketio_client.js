@@ -1,4 +1,4 @@
-import { io } from "socket.io-client";
+getimport { io } from "socket.io-client";
 
 frappe.provide("frappe.realtime");
 
@@ -123,7 +123,7 @@ class RealTimeClient {
 			}
 			host = host + ":" + port;
 		}
-		return host //+ `/${frappe.boot.sitename}`;
+		return host + `/${frappe.boot.sitename}`;
 	}
 
 	subscribe(task_id, opts) {
