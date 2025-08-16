@@ -36,6 +36,7 @@ frappe.ui.form.Layout = class Layout {
 			this.setup_tabbed_layout();
 		}
 
+		this.setup_tab_events();
 		this.frm && this.setup_tooltip_events();
 		this.render();
 	}

@@ -10,7 +10,7 @@ def extract(*args, **kwargs):
 	To handle JS microtemplates, parse all code again using regex."""
 	fileobj = args[0] or kwargs["fileobj"]
 
-	code = fileobj.read().decode("utf-8")
+	code = fileobj.read().decode("utf-8",errors="ignore")
 
 	for lineno, funcname, messages, comments in babel_extract(*args, **kwargs):
 		if funcname == "_" and isinstance(messages, tuple) and len(messages) > 1:

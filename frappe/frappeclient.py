@@ -107,23 +107,12 @@ class FrappeClient:
 			headers=self.headers,
 		)
 
-	def get_list(
-		self,
-		doctype,
-		fields='["name"]',
-		filters=None,
-		limit_start=0,
-		limit_page_length=None,
-		order_by=None,
-		group_by=None,
-	):
+	def get_list(self, doctype, fields='["name"]', filters=None, limit_start=0, limit_page_length=None):
 		"""Return list of records of a particular type."""
 		if not isinstance(fields, str):
 			fields = json.dumps(fields)
 		params = {
 			"fields": fields,
-			"order_by": order_by,
-			"group_by": group_by,
 		}
 		if filters:
 			params["filters"] = json.dumps(filters)

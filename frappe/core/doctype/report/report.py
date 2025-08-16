@@ -291,7 +291,13 @@ class Report(Document):
 	@staticmethod
 	def _format(parts):
 		# sort by is saved as DocType.fieldname, covert it to sql
+		print("DEBUG Transforming the code")
+		#print("`tab{}`.`{}`".format(*parts))
 		return "`tab{}`.`{}`".format(*parts)
+		# doctype = parts[0]
+		# if doctype.startswith("tab"):
+		# 	doctype = doctype[3:]
+		# return f"`tab{doctype}`.`{parts[1]}`"
 
 	def get_standard_report_columns(self, params):
 		if params.get("fields"):

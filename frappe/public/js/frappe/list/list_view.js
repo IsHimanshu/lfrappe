@@ -33,7 +33,6 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		);
 		this.count_upper_bound = 1001;
 		this._element_factory = new ElementFactory(this.doctype);
-		this.column_max_widths = {};
 	}
 
 	has_permissions() {
@@ -634,26 +633,13 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		this.$result.find(".list-row-container").remove();
 		this.render_header();
 
-		let has_assignto = false;
-
 		if (this.data.length > 0) {
 			// append rows
 			let idx = 0;
 			for (let doc of this.data) {
 				doc._idx = idx++;
 				this.$result.append(this.get_list_row_html(doc));
-				if (!has_assignto && doc._assign) {
-					has_assignto = true;
-				}
 			}
-		}
-		this.apply_column_widths();
-
-		// add class to result to indetify that it has assignto
-		if (has_assignto) {
-			this.$result.addClass("has-assign-to");
-		} else {
-			this.$result.addClass("no-assign-to");
 		}
 	}
 
@@ -666,10 +652,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		let $count = this.get_count_element();
 		this.get_count_str().then((count) => {
 			$count.html(`<span>${count}</span>`);
-			if (
-				this.count_upper_bound &&
-				(this.total_count == this.count_upper_bound || this.total_count == null)
-			) {
+			if (this.count_upper_bound) {
 				$count.attr(
 					"title",
 					__(
@@ -710,14 +693,13 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 				${__(subject_field.label)}
 			</span>
 		`;
-		let $columns = this.columns
+		const $columns = this.columns
 			.map((col) => {
 				let classes = [
 					"list-row-col ellipsis",
 					col.type == "Subject" ? "list-subject level" : "hidden-xs",
 					col.type == "Tag" ? "tag-col hide" : "",
 					frappe.model.is_numeric_field(col.df) ? "text-right" : "",
-					col.df?.fieldname,
 				].join(" ");
 
 				let html = "";
@@ -735,14 +717,6 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 			`;
 			})
 			.join("");
-
-		// Add column for button and dropdown button to the header
-		if (this.settings.button) {
-			$columns += `<div class="list-row-col hidden-xs"></div>`;
-		}
-		if (this.settings.dropdown_button) {
-			$columns += `<div class="list-row-col hidden-xs"></div>`;
-		}
 
 		const right_html = `
 			<span class="list-count" style=""></span>
@@ -782,25 +756,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 	}
 
 	get_left_html(doc) {
-		let left_html = "";
-		for (let i = 0; i < this.columns.length; i++) {
-			let col = this.columns[i];
-
-			if (frappe.is_mobile() && col.type == "Field" && [3, 4].includes(i)) {
-				left_html += `<div class="mobile-layout">${this.get_column_html(
-					col,
-					doc,
-					true
-				)}</div>`;
-			} else {
-				left_html += this.get_column_html(col, doc, false);
-			}
-		}
-
-		left_html += this.generate_button_html(doc);
-		left_html += this.generate_dropdown_html(doc);
-
-		return left_html;
+		return this.columns.map((col) => this.get_column_html(col, doc)).join("");
 	}
 
 	get_right_html(doc) {
@@ -826,7 +782,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		`;
 	}
 
-	get_column_html(col, doc, show_in_mobile) {
+	get_column_html(col, doc) {
 		if (col.type === "Status" || col.df?.options == "Workflow State") {
 			let show_workflow_state = col.df?.options == "Workflow State";
 			return `
@@ -934,13 +890,12 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 
 		const class_map = {
 			Subject: "list-subject level",
-			Field: !show_in_mobile ? "hidden-xs" : "",
+			Field: "hidden-xs",
 		};
-		let css_class = [
+		const css_class = [
 			"list-row-col ellipsis",
 			class_map[col.type],
 			frappe.model.is_numeric_field(df) ? "text-right" : "",
-			fieldname,
 		].join(" ");
 
 		let column_html;
@@ -957,48 +912,11 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 			}[col.type];
 		}
 
-		if (frappe.is_mobile() && col.type == "Subject") {
-			css_class += " bold";
-		}
-
-		/**
-		 * Calculates the width of a text element based on its length.
-		 * If the length of the text is not available, it defaults to a length of 22.5.
-		 */
-		let textLength = $(column_html).text()?.trim()?.length || 22.5;
-		let calculatedWidth = (textLength * 10) / 1.3;
-
-		/**
-		 * Updates the `column_max_widths` object by setting the maximum width for a specific column (fieldname).
-		 * If no width is set for the column, or the newly calculated width exceeds the current width, the width is updated.
-		 */
-		if (
-			(!this.column_max_widths[fieldname] ||
-				calculatedWidth > this.column_max_widths[fieldname]) &&
-			!frappe.is_mobile()
-		) {
-			this.column_max_widths[fieldname] = calculatedWidth;
-		}
-
 		return `
 			<div class="${css_class}">
 				${column_html}
 			</div>
 		`;
-	}
-
-	/**
-	 * Applies dynamically calculated widths to elements based on their respective class names.
-	 * Iterates through `column_max_widths` and sets the `width` and `flex` styles for each column.
-	 * The width for each column is applied as both a fixed `width` and a flexible `flex` property.
-	 */
-	apply_column_widths() {
-		Object.entries(this.column_max_widths).forEach(([fieldname, width]) => {
-			$(`.${fieldname}`).css({
-				width: width,
-				flex: `1 0 ${width}px`,
-			});
-		});
 	}
 
 	get_tags_html(user_tags, limit, colored = false) {
@@ -1023,7 +941,23 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 
 	get_meta_html(doc) {
 		let html = "";
+		let settings_button = "";
+		let button_section = "";
+		const dropdown_button = this.generate_dropdown_html(doc);
 
+		if (this.settings.button && this.settings.button.show(doc)) {
+			settings_button = `
+				<span class="list-actions">
+					<button class="btn btn-action btn-default btn-xs"
+						data-name="${doc.name}" data-idx="${doc._idx}"
+						title="${this.settings.button.get_description(doc)}">
+						${this.settings.button.get_label(doc)}
+					</button>
+				</span>
+			`;
+		}
+
+		button_section = settings_button + dropdown_button;
 		const modified = comment_when(doc.modified, true);
 
 		let assigned_to = ``;
@@ -1046,7 +980,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		html += `
 			<div class="level-item list-row-activity hidden-xs">
 				<div class="hidden-md hidden-xs d-flex">
-					${assigned_to}
+					${button_section || assigned_to}
 				</div>
 				<span class="modified">${modified}</span>
 				${comment_count || ""}
@@ -1063,29 +997,8 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		return html;
 	}
 
-	generate_button_html(doc) {
-		let button_container = "";
-		if (this.settings.button) {
-			const button_html = `
-				<button class="btn btn-action btn-default btn-xs ellipsis"
-					data-name="${doc.name}" data-idx="${doc._idx}"
-					title="${this.settings.button.get_description(doc)}">
-						${this.settings.button.get_label(doc)}
-				</button>
-			`;
-			button_container += `
-				<div class="list-row-col ellipsis hidden-xs">
-					${this.settings.button.show(doc) ? button_html : "<span></span>"}
-				</div>
-			`;
-		}
-
-		return button_container;
-	}
-
 	generate_dropdown_html(doc) {
-		let dropdown_container = "";
-
+		let dropdown_button = "";
 		if (this.settings.dropdown_button) {
 			let button_actions = "";
 			this.settings.dropdown_button.buttons.forEach((button, index) => {
@@ -1099,24 +1012,21 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 				}
 			});
 
-			let dropdown_buttons = "";
 			if (button_actions) {
-				dropdown_buttons = `
+				dropdown_button = `
+				<div class="inner-group-button mr-2" data-name="${doc.name}" data-label="${
+					this.settings.dropdown_button.get_label
+				}">
 					<button type="button" class="btn btn-xs btn-default ellipsis" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 						${this.settings.dropdown_button.get_label}
 						${frappe.utils.icon("select", "xs")}
 					</button>
 					<div role="menu" class="dropdown-menu">${button_actions}</div>
+				</div>
 				`;
 			}
-
-			dropdown_container = `
-				<div class="list-row-col hidden-xs inner-group-button" data-name="${doc.name}" data-label="${this.settings.dropdown_button.get_label}">
-					${dropdown_buttons}
-				</div>
-			`;
 		}
-		return dropdown_container;
+		return dropdown_button;
 	}
 
 	apply_styles_basedon_dropdown() {
@@ -1908,7 +1818,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 			action: () => this.toggle_side_bar(),
 			condition: () => !this.page.disable_sidebar_toggle,
 			standard: true,
-			shortcut: "Ctrl+G",
+			shortcut: "Ctrl+K",
 		});
 
 		if (frappe.user.has_role("System Manager") && frappe.boot.developer_mode) {

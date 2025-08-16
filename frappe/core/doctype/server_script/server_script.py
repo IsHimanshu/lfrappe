@@ -80,9 +80,7 @@ class ServerScript(Document):
 		rate_limit_seconds: DF.Int
 		reference_doctype: DF.Link | None
 		script: DF.Code
-		script_type: DF.Literal[
-			"DocType Event", "Scheduler Event", "Permission Query", "API", "Workflow Task"
-		]
+		script_type: DF.Literal["DocType Event", "Scheduler Event", "Permission Query", "API"]
 	# end: auto-generated types
 
 	def validate(self):
@@ -217,19 +215,6 @@ class ServerScript(Document):
 		safe_exec(self.script, None, locals, script_filename=self.name)
 		if locals["conditions"]:
 			return locals["conditions"]
-
-	def execute_workflow_task(self, doc: Document):
-		"""
-		Specific to Workflow Tasks via Workflow Action Master
-		"""
-		if self.script_type != "Workflow Task":
-			raise frappe.DoesNotExistError
-
-		safe_exec(
-			self.script,
-			_locals={"doc": doc},
-			script_filename=self.name,
-		)
 
 
 @frappe.whitelist()

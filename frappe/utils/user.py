@@ -291,7 +291,7 @@ def get_fullname_and_avatar(user: str) -> _dict:
 	)
 	return _dict(
 		{
-			"fullname": " ".join(list(filter(None, [first_name, last_name]))),
+			"fullname": " ".join(list(filter(None, [last_name,first_name]))),
 			"avatar": avatar,
 			"name": name,
 		}

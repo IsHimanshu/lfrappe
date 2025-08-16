@@ -367,6 +367,7 @@
   },
   {
    "collapsible": 1,
+   "depends_on": "eval:frappe.session.user === 'Administrator'\r\n",
    "fieldname": "document_follow_notifications_section",
    "fieldtype": "Section Break",
    "label": "Document Follow"
@@ -387,7 +388,7 @@
   },
   {
    "collapsible": 1,
-   "depends_on": "enabled",
+   "depends_on": "enabled\neval:frappe.session.user === 'Administrator'\n",
    "fieldname": "email_settings",
    "fieldtype": "Section Break",
    "label": "Email"
@@ -451,6 +452,7 @@
    "label": "Home Settings"
   },
   {
+   "depends_on": "eval:frappe.session.user === 'Administrator'\r\n",
    "description": "These values will be automatically updated in transactions and also will be useful to restrict permissions for this user on transactions containing these values.",
    "fieldname": "sb2",
    "fieldtype": "Section Break",
@@ -572,7 +574,7 @@
   },
   {
    "collapsible": 1,
-   "depends_on": "enabled",
+   "depends_on": "enabled\neval:frappe.session.user === 'Administrator'\n",
    "fieldname": "third_party_authentication",
    "fieldtype": "Section Break",
    "label": "Third Party Authentication",
@@ -601,7 +603,6 @@
    "unique": 1
   },
   {
-   "description": "<a href=\"https://docs.frappe.io/framework/user/en/api/rest#1-token-based-authentication\" target=\"_blank\">\n  Click here to learn about token-based authentication\n</a>",
    "fieldname": "generate_keys",
    "fieldtype": "Button",
    "label": "Generate Keys",
@@ -706,6 +707,7 @@
    "label": "Settings"
   },
   {
+   "depends_on": "eval:frappe.session.user === 'Administrator'\r\n",
    "fieldname": "connections_tab",
    "fieldtype": "Tab Break",
    "label": "Connections",
@@ -741,6 +743,7 @@
   },
   {
    "collapsible": 1,
+   "depends_on": "eval:frappe.session.user === 'Administrator'\r\n",
    "fieldname": "workspace_section",
    "fieldtype": "Section Break",
    "label": "Workspace"
@@ -754,6 +757,7 @@
   },
   {
    "collapsible": 1,
+   "depends_on": "eval:frappe.session.user === 'Administrator'\r\n",
    "fieldname": "app_section",
    "fieldtype": "Section Break",
    "label": "App"
@@ -766,6 +770,7 @@
   },
   {
    "collapsible": 1,
+   "depends_on": "eval:frappe.session.user === 'Administrator'",
    "fieldname": "navigation_settings_section",
    "fieldtype": "Section Break",
    "label": "Navigation Settings"
@@ -784,6 +789,7 @@
   },
   {
    "collapsible": 1,
+   "depends_on": "eval:frappe.session.user === 'Administrator'\r\n",
    "fieldname": "list_settings_section",
    "fieldtype": "Section Break",
    "label": "List Settings"
@@ -808,6 +814,7 @@
   },
   {
    "collapsible": 1,
+   "depends_on": "eval:frappe.session.user === 'Administrator'\r\n",
    "fieldname": "form_settings_section",
    "fieldtype": "Section Break",
    "label": "Form Settings"
@@ -844,6 +851,11 @@
   {
    "group": "Profile",
    "link_doctype": "Contact",
+   "link_fieldname": "user"
+  },
+  {
+   "group": "Profile",
+   "link_doctype": "Blogger",
    "link_fieldname": "user"
   },
   {
@@ -888,7 +900,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2025-06-05 23:55:27.884061",
+ "modified": "2025-08-01 13:40:00.055914",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "User",

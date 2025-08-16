@@ -42,9 +42,10 @@ def get_decrypted_password(doctype, name, fieldname="password", raise_exception=
 
 			return None
 
-	if raise_exception:
+	elif raise_exception:
 		frappe.throw(
 			_("Password not found for {0} {1} {2}").format(doctype, name, fieldname),
+			frappe.AuthenticationError,
 		)
 
 

@@ -1,5 +1,6 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: MIT. See LICENSE
+"""Use blog post test to test user permissions logic"""
 
 import json
 from datetime import date

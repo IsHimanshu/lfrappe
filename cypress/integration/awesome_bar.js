@@ -4,9 +4,9 @@ context("Awesome Bar", () => {
 		cy.login();
 		cy.visit("/app/todo"); // Make sure ToDo filters are cleared.
 		cy.clear_filters();
-		cy.visit("/app/web-page"); // Make sure Blog Post filters are cleared.
+		cy.visit("/app/blog-post"); // Make sure Blog Post filters are cleared.
 		cy.clear_filters();
-		cy.visit("/app/build"); // Go to some other page.
+		cy.visit("/app/website"); // Go to some other page.
 	});
 
 	beforeEach(() => {
@@ -53,19 +53,19 @@ context("Awesome Bar", () => {
 	});
 
 	it("navigates to another doctype, filter not bleeding", () => {
-		cy.get("@awesome_bar").type("web page");
+		cy.get("@awesome_bar").type("blog post");
 		cy.wait(150); // Wait a bit before hitting enter.
 		cy.get("@awesome_bar").type("{enter}");
-		cy.get(".title-text").should("contain", "Web Page");
+		cy.get(".title-text").should("contain", "Blog Post");
 		cy.wait(200); // Wait a bit longer before checking the filter.
 		cy.location("search").should("be.empty");
 	});
 
 	it("navigates to new form", () => {
-		cy.get("@awesome_bar").type("new web page");
+		cy.get("@awesome_bar").type("new blog post");
 		cy.wait(150); // Wait a bit before hitting enter
 		cy.get("@awesome_bar").type("{enter}");
-		cy.get(".title-text:visible").should("have.text", "New Web Page");
+		cy.get(".title-text:visible").should("have.text", "New Blog Post");
 	});
 
 	it("calculates math expressions", () => {

@@ -194,11 +194,7 @@ frappe.ui.toolbar.Toolbar = class {
 	add_back_button() {
 		if (!frappe.is_mobile()) return;
 		this.navbar = $(".navbar-brand");
-		let doctype = frappe.get_route()[1];
-		let list_view_route = `/app/${frappe.router.convert_from_standard_route([
-			"list",
-			doctype,
-		])}`;
+		let list_view_route = `/app/${frappe.get_route()[1].toLowerCase()}`;
 		this.navbar.attr("href", list_view_route);
 		this.navbar.html("");
 		this.navbar.html(frappe.utils.icon("arrow-left", "md"));

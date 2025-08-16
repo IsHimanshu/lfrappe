@@ -50,19 +50,6 @@ frappe.ui.form.PrintView = class {
 		`
 		);
 
-		const htmlSkeleton = `
-		<!DOCTYPE html>
-		<html lang="en">
-			<head>
-				<meta charset="UTF-8" />
-				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-			</head>
-			<body>
-			</body>
-		</html>
-		`;
-		document.querySelector("iframe.print-format-container").srcdoc = htmlSkeleton;
-
 		this.print_settings = frappe.model.get_doc(":Print Settings", "Print Settings");
 		this.setup_menu();
 		this.setup_toolbar();
@@ -198,19 +185,19 @@ frappe.ui.form.PrintView = class {
 		this.setup_customize_dialog();
 
 		// print designer link
-		if (Object.keys(frappe.boot.versions).includes("print_designer")) {
-			this.page.add_inner_message(`
-			<a style="line-height: 2.4" href="/app/print-designer?doctype=${this.frm.doctype}">
-				${__("Try the new Print Designer")}
-			</a>
-			`);
-		} else {
-			this.page.add_inner_message(`
-			<a style="line-height: 2.4" href="https://frappecloud.com/marketplace/apps/print_designer?utm_source=framework-desk&utm_medium=print-view&utm_campaign=try-link">
-				${__("Try the new Print Designer")}
-			</a>
-			`);
-		}
+		// if (Object.keys(frappe.boot.versions).includes("print_designer")) {
+		// 	this.page.add_inner_message(`
+		// 	<a style="line-height: 2.4" href="/app/print-designer?doctype=${this.frm.doctype}">
+		// 		${__("Try the new Print Designer")}
+		// 	</a>
+		// 	`);
+		// } else {
+		// 	this.page.add_inner_message(`
+		// 	<a style="line-height: 2.4" href="https://frappecloud.com/marketplace/apps/print_designer?utm_source=framework-desk&utm_medium=print-view&utm_campaign=try-link">
+		// 		${__("Try the new Print Designer")}
+		// 	</a>
+		// 	`);
+		// }
 		let tasks = [
 			this.set_default_print_format,
 			this.set_default_print_language,

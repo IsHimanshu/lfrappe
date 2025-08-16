@@ -103,15 +103,22 @@ frappe.ui.SortSelector = class SortSelector {
 
 		var { meta_sort_field, meta_sort_order } = this.get_meta_sort_field();
 
-		if (!this.args.sort_by) {
-			if (meta_sort_field) {
-				this.args.sort_by = meta_sort_field;
-				this.args.sort_order = meta_sort_order;
-			} else {
-				// default
-				this.args.sort_by = "creation";
-				this.args.sort_order = "desc";
-			}
+		// if (!this.args.sort_by) {
+		// 	if (meta_sort_field) {
+		// 		this.args.sort_by = meta_sort_field;
+		// 		this.args.sort_order = meta_sort_order;
+		// 	} else {
+		// 		// default
+		// 		this.args.sort_by = "creation";
+		// 		this.args.sort_order = "desc";
+		// 	}
+		if (meta_sort_field) {
+			this.args.sort_by = meta_sort_field;
+			this.args.sort_order = meta_sort_order;
+		} else {
+			// default
+			this.args.sort_by = "creation";
+			this.args.sort_order = "desc";
 		}
 
 		if (!this.args.sort_by_label) {
@@ -206,4 +213,15 @@ frappe.ui.SortSelector = class SortSelector {
 			return `${sort_by} ${this.sort_order}`;
 		}
 	}
+	// get_sql_string() {  Himanshyu
+	// const sort_by = this.sort_by.includes('.') ? this.sort_by : `\`tab${this.doctype}\`.${this.sort_by}`;
+	// const name_col = `\`tab${this.doctype}\`.name`;
+	// console.log("fuuuuuuck")
+	// if (!["name", "creation", "modified"].includes(this.sort_by.split('.').pop())) {
+	// 	return `${sort_by} ${this.sort_order}, ${name_col} ${this.sort_order}`;
+	// } else {
+	// 	return `${sort_by} ${this.sort_order}`;
+	// }
+	//}
+
 };

@@ -320,7 +320,7 @@ class User(Document):
 				self.set(field, sanitize_html(field_value, always_sanitize=True))
 
 	def set_full_name(self):
-		self.full_name = " ".join(filter(None, [self.first_name, self.last_name]))
+		self.full_name = " ".join(filter(None, [self.last_name, self.first_name]))
 
 	def check_enable_disable(self):
 		# do not allow disabling administrator/guest
@@ -449,8 +449,8 @@ class User(Document):
 		return link
 
 	def get_fullname(self):
-		"""get first_name space last_name"""
-		return (self.first_name or "") + ((self.first_name and " ") or "") + (self.last_name or "")
+		return (self.last_name or "") + ((self.last_name and " ") or "") + (self.first_name or "")
+
 
 	def password_reset_mail(self, link):
 		reset_password_template = frappe.db.get_system_setting("reset_password_template")
@@ -589,13 +589,6 @@ class User(Document):
 				if row.user == self.name:
 					note.remove(row)
 			note.save(ignore_permissions=True)
-
-		# Unlink user from all of its invitation docs
-		invites = frappe.db.get_all("User Invitation", filters={"email": self.name}, pluck="name")
-		for invite in invites:
-			invite_doc = frappe.get_doc("User Invitation", invite)
-			invite_doc.user = None
-			invite_doc.save(ignore_permissions=True)
 
 	def before_rename(self, old_name, new_name, merge=False):
 		# if merging, delete the old user notification settings
@@ -1350,7 +1343,7 @@ def generate_keys(user: str):
 	user_details.api_secret = api_secret
 	user_details.save()
 
-	return {"api_key": user_details.api_key, "api_secret": api_secret}
+	return {"api_secret": api_secret}
 
 
 @frappe.whitelist()
