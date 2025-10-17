@@ -1,0 +1,14 @@
+node_modules/
+*.min.js
+*.min.css
+*.map
+
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+yarn.lock
+package-lock.json
