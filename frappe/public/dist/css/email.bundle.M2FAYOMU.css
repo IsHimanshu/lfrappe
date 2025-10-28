@@ -1,6 +1,6 @@
 @charset "UTF-8";
 
-/* ../../../../../tmp/tmp-3888966-DFGyjGTuOSq6/frappe/frappe/public/scss/email.bundle.css */
+/* ../../../../../tmp/tmp-3968588-5V3Ge5VpgoCA/frappe/frappe/public/scss/email.bundle.css */
 body {
   line-height: 1.5;
   color: #171717;
@@ -173,7 +173,7 @@ hr {
   line-height: 1.42857143;
   vertical-align: top;
   border-top: 1px solid #f3f3f3;
-  text-align: right;
+  text-align: left;
 }
 .table th {
   font-weight: bold;
@@ -198,7 +198,7 @@ hr {
   padding-top: 10px;
 }
 .text-right {
-  text-align: left !important;
+  text-align: right !important;
 }
 .text-center {
   text-align: center !important;
@@ -280,22 +280,22 @@ hr {
 blockquote {
   padding: 1px 15px;
   position: relative;
-  margin-right: 0px;
-  border-right: 2px solid #e2e2e2;
+  margin-left: 0px;
+  border-left: 2px solid #e2e2e2;
 }
 blockquote p {
   margin: 5px 0;
 }
 .ql-editor li {
   list-style-type: none;
-  padding-right: 1.5em;
+  padding-left: 1.5em;
   position: relative;
 }
 .ql-editor li > .ql-ui:before {
   display: inline-block;
-  margin-right: -1.5em;
-  margin-left: 0.3em;
-  text-align: left;
+  margin-left: -1.5em;
+  margin-right: 0.3em;
+  text-align: right;
   white-space: nowrap;
   width: 1.2em;
 }
@@ -347,21 +347,21 @@ blockquote p {
   counter-reset: list-4 list-5 list-6 list-7 list-8 list-9;
 }
 .ql-editor .ql-indent-1:not(.ql-direction-rtl) {
-  padding-right: 3em;
+  padding-left: 3em;
 }
 .ql-editor li.ql-indent-1:not(.ql-direction-rtl) {
-  padding-right: 4.5em;
+  padding-left: 4.5em;
 }
 .ql-editor .ql-indent-2:not(.ql-direction-rtl) {
-  padding-right: 6em;
+  padding-left: 6em;
 }
 .ql-editor li.ql-indent-2:not(.ql-direction-rtl) {
-  padding-right: 7.5em;
+  padding-left: 7.5em;
 }
 .ql-editor .ql-indent-3:not(.ql-direction-rtl) {
-  padding-right: 9em;
+  padding-left: 9em;
 }
 .ql-editor li.ql-indent-3:not(.ql-direction-rtl) {
-  padding-right: 10.5em;
+  padding-left: 10.5em;
 }
-/*# sourceMappingURL=email.bundle.ZAP5I3Y4.css.map */
+/*# sourceMappingURL=email.bundle.M2FAYOMU.css.map */

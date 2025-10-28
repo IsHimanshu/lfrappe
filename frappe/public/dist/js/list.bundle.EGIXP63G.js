@@ -6669,6 +6669,12 @@
     }
     setup_defaults() {
       return super.setup_defaults().then(() => {
+        return frappe.require("/assets/frappe/js/frappe/views/gantt/gantt_view.css", "css").then(() => {
+          console.log("\u2705 CSS loaded via frappe.require");
+        }).catch((err) => {
+          console.error("\u274C CSS loading failed:", err);
+        });
+      }).then(() => {
         this.page_title = this.page_title + " " + __("Gantt");
         this.calendar_settings = frappe.views.calendar[this.doctype] || {};
         if (typeof this.calendar_settings.gantt == "object") {
@@ -6693,7 +6699,22 @@
       var me2 = this;
       var meta = this.meta;
       var field_map = this.calendar_settings.field_map;
+      let invalid_count = 0;
       this.tasks = this.data.map(function(item) {
+        if (!item[field_map.start]) {
+          console.warn(
+            `Task ${item.name} skipped - missing start date (${field_map.start})`
+          );
+          invalid_count++;
+          return null;
+        }
+        if (!item[field_map.end]) {
+          console.warn(
+            `Task ${item.name} skipped - missing end date (${field_map.end})`
+          );
+          invalid_count++;
+          return null;
+        }
         var progress = 0;
         if (field_map.progress && $.isFunction(field_map.progress)) {
           progress = field_map.progress(item);
@@ -6702,7 +6723,11 @@
         }
         var label;
         if (meta.title_field) {
-          label = item.progress ? __("{0} ({1}) - {2}%", [item[meta.title_field], item.name, item.progress]) : __("{0} ({1})", [item[meta.title_field], item.name]);
+          label = item.progress ? __("{0} ({1}) - {2}%", [
+            item[meta.title_field],
+            item.name,
+            item.progress
+          ]) : __("{0} ({1})", [item[meta.title_field], item.name]);
         } else {
           label = item[field_map.title];
         }
@@ -6712,7 +6737,7 @@
           name: label,
           id: item[field_map.id || "name"],
           doctype: me2.doctype,
-          progress,
+          progress: progress || 0,
           dependencies: item.depends_on_tasks || ""
         };
         if (item.color && frappe.ui.color.validate_hex(item.color)) {
@@ -6722,7 +6747,19 @@
           r["custom_class"] = "bar-milestone";
         }
         return r;
-      });
+      }).filter((task) => task !== null);
+      if (invalid_count > 0) {
+        frappe.show_alert(
+          {
+            message: __(
+              "{0} tasks were skipped due to missing dates",
+              [invalid_count]
+            ),
+            indicator: "orange"
+          },
+          5
+        );
+      }
     }
     render() {
       this.load_lib.then(() => {
@@ -6732,120 +6769,518 @@
     render_header() {
     }
     render_gantt() {
+      var _a3, _b;
       const me2 = this;
       const gantt_view_mode = this.view_user_settings.gantt_view_mode || "Day";
       const field_map = this.calendar_settings.field_map;
       const date_format = "YYYY-MM-DD";
       this.$result.empty();
       this.$result.addClass("gantt-modern");
-      this.gantt = new Gantt(this.$result[0], this.tasks, {
-        bar_height: 35,
-        bar_corner_radius: 4,
-        resize_handle_width: 8,
-        resize_handle_height: 28,
-        resize_handle_corner_radius: 3,
-        resize_handle_offset: 4,
-        view_mode: gantt_view_mode,
-        date_format: "YYYY-MM-DD",
-        on_click: (task) => {
-          frappe.set_route("Form", task.doctype, task.id);
-        },
-        on_date_change: (task, start, end) => {
-          if (!me2.can_write)
-            return;
-          frappe.db.set_value(task.doctype, task.id, {
-            [field_map.start]: moment(start).format(date_format),
-            [field_map.end]: moment(end).format(date_format)
-          });
-        },
-        on_progress_change: (task, progress) => {
-          if (!me2.can_write)
-            return;
-          var progress_fieldname = "progress";
-          if ($.isFunction(field_map.progress)) {
-            progress_fieldname = null;
-          } else if (field_map.progress) {
-            progress_fieldname = field_map.progress;
-          }
-          if (progress_fieldname) {
+      if (!this.tasks || this.tasks.length === 0) {
+        this.$result.html(`
+      <div class="text-center text-muted" style="padding: 100px;">
+        <div class="mb-3">
+          <svg class="icon icon-xl" style="width: 80px; height: 80px;">
+            <use href="#icon-calendar"></use>
+          </svg>
+        </div>
+        <h4>${__("No Tasks to Display")}</h4>
+        <p class="text-muted">${__("All tasks are missing required dates")}</p>
+      </div>
+    `);
+        return;
+      }
+      try {
+        const page_shell = document.createElement("div");
+        page_shell.className = "gantt-page-shell";
+        this.$result.append(page_shell);
+        const gantt_wrapper = document.createElement("div");
+        gantt_wrapper.className = "gantt-wrapper-container";
+        page_shell.appendChild(gantt_wrapper);
+        this.gantt = new Gantt(gantt_wrapper, this.tasks, {
+          bar_height: 30,
+          bar_corner_radius: 3,
+          upper_header_height: 0,
+          lower_header_height: 0,
+          padding: 18,
+          popup_on: "hover",
+          infinite_padding: false,
+          view_mode: gantt_view_mode,
+          date_format,
+          view_mode_select: false,
+          today_button: false,
+          readonly: false,
+          readonly_dates: false,
+          readonly_progress: true,
+          language: frappe.boot.lang || "en",
+          on_date_change: (task, start, end) => {
+            if (!me2.can_write) {
+              frappe.show_alert({ message: __("You don't have permission to edit this task"), indicator: "red" });
+              return;
+            }
             frappe.db.set_value(task.doctype, task.id, {
-              [progress_fieldname]: parseInt(progress)
+              [field_map.start]: moment(start).format(date_format),
+              [field_map.end]: moment(end).format(date_format)
+            }).then(() => {
+              frappe.show_alert({ message: __("Task dates updated"), indicator: "green" });
+            }).catch((err) => {
+              console.error("Error updating dates:", err);
+              frappe.show_alert({ message: __("Error updating task dates"), indicator: "red" });
             });
+          },
+          on_drag_undone: (state) => {
+            frappe.show_alert({ message: __("Drag Undo", state), indicator: "green" });
+          },
+          on_progress_change: (task, progress) => {
+            if (!me2.can_write) {
+              frappe.show_alert({ message: __("You don't have permission to edit this task"), indicator: "red" });
+              return;
+            }
+            let progress_fieldname = $.isFunction(field_map.progress) ? null : field_map.progress || "progress";
+            if (progress_fieldname) {
+              frappe.db.set_value(task.doctype, task.id, {
+                [progress_fieldname]: parseInt(progress, 10)
+              }).then(() => {
+                frappe.show_alert({ message: __("Progress updated to {0}%", [progress]), indicator: "green" });
+              }).catch((err) => {
+                console.error("Error updating progress:", err);
+                frappe.show_alert({ message: __("Error updating progress"), indicator: "red" });
+              });
+            }
+          },
+          on_view_change: (mode) => {
+            const mode_name = typeof mode === "string" ? mode : mode.name;
+            me2.save_view_user_settings({ gantt_view_mode: mode_name });
+          },
+          popup_func: ({ task, set_title, set_subtitle, set_details, add_action }) => {
+            var _a4;
+            set_title(task.name);
+            const startStr = moment(task.start).format("ll");
+            const endStr = moment(task.end).format("ll");
+            set_subtitle(`${startStr} \u2192 ${endStr}`);
+            let detailsHtml = `
+      <div>
+        <strong>${__("Progress")}:</strong> ${(_a4 = task.progress) != null ? _a4 : 0}%
+      </div>
+      ${task.dependencies ? `<div><strong>${__("Dependencies")}:</strong> ${task.dependencies}</div>` : ""}
+    `;
+            set_details(detailsHtml);
+            add_action(__("Open"), (t) => {
+              frappe.set_route("Form", t.doctype, t.id);
+            });
+            return null;
           }
-        },
-        on_view_change: (mode) => {
-          me2.save_view_user_settings({
-            gantt_view_mode: mode
-          });
-        },
-        custom_popup_html: (task) => {
-          var item = me2.get_item(task.id);
-          var html = `<div class="title">${task.name}</div>
-					<div class="subtitle">${moment(task._start).format("MMM D")} - ${moment(task._end).format(
-            "MMM D"
-          )}</div>`;
-          var custom = me2.settings.gantt_custom_popup_html;
-          if (custom && $.isFunction(custom)) {
-            var ganttobj = task;
-            html = custom(ganttobj, item);
-          }
-          return '<div class="details-container">' + html + "</div>";
+        });
+        this.setup_add_task_buttons();
+        const styleId = "gantt-fix-style";
+        if (!document.getElementById(styleId)) {
+          const style = document.createElement("style");
+          style.id = styleId;
+          style.textContent = `
+      .gantt-header-container .lower-header .lower-text,
+      .gantt-header-container .upper-header .upper-text { white-space: nowrap; }
+      .gantt-header-container .lower-header .lower-text { padding-right: 6px; }
+
+	  /* Make resize handles bigger and add pointer cursor */
+    .gantt .handle {
+      cursor: ew-resize !important;
+      width: 8px !important;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    
+    .gantt .handle:hover,
+    .gantt .handle.active {
+      opacity: 1 !important;
+    }
+    
+    .gantt .handle.left {
+      transform: translateX(-2px);
+    }
+    
+    .gantt .handle.right {
+      transform: translateX(2px);
+    }
+    
+    /* Progress handle */
+    .gantt .handle.progress {
+      cursor: ew-resize !important;
+      r: 6 !important;
+      opacity: 0.6;
+    }
+    
+    .gantt .handle.progress:hover,
+    .gantt .handle.progress.active {
+      opacity: 1 !important;
+    }
+    
+    /* Make handles more visible on bar hover */
+    .gantt .bar-wrapper:hover .handle {
+      opacity: 0.8;
+    }
+    `;
+          document.head.appendChild(style);
+        }
+        this.create_footer_controls(page_shell);
+        this.set_colors();
+        (_b = (_a3 = this.gantt).sync_header_to_grid) == null ? void 0 : _b.call(_a3);
+        console.log(`Gantt rendered successfully with ${this.tasks.length} tasks`);
+      } catch (error) {
+        console.error("Error rendering Gantt chart:", error);
+        this.$result.html(`
+      <div class="text-center text-danger" style="padding: 100px;">
+        <div class="mb-3">
+          <svg class="icon icon-xl text-danger" style="width: 80px; height: 80px;">
+            <use href="#icon-alert-circle"></use>
+          </svg>
+        </div>
+        <h4>${__("Error Rendering Gantt Chart")}</h4>
+        <p class="text-muted">${error.message}</p>
+        <pre class="text-left small text-muted" style="max-width: 600px; margin: 20px auto;">${error.stack || ""}</pre>
+        <button class="btn btn-secondary btn-sm" onclick="location.reload()">${__("Reload Page")}</button>
+      </div>
+    `);
+      }
+    }
+    create_footer_controls(container) {
+      const me2 = this;
+      $(container).find(".gantt-footer-controls").remove();
+      const footer = $(`
+			<div class="gantt-footer-controls">
+				<div class="footer-left">
+					<button class="btn btn-sm btn-default today-btn">
+						<svg class="icon icon-sm">
+							<use href="#icon-calendar"></use>
+						</svg>
+						${__("Today")}
+					</button>
+				</div>
+				<div class="footer-right">
+					<label style="margin-right: 8px; font-weight: 500;">${__("View")}:</label>
+					<select class="form-select form-select-sm view-mode-select">
+						<option value="Quarter Day">${__("Quarter Day")}</option>
+						<option value="Half Day">${__("Half Day")}</option>
+						<option value="Day">${__("Day")}</option>
+						<option value="Week">${__("Week")}</option>
+						<option value="Month">${__("Month")}</option>
+					</select>
+				</div>
+			</div>
+		`);
+      const current_mode = this.view_user_settings.gantt_view_mode || "Day";
+      footer.find(".view-mode-select").val(current_mode);
+      $(container).append(footer);
+      footer.find(".today-btn").on("click", function() {
+        var _a3, _b;
+        if (me2.gantt && me2.gantt.scroll_current) {
+          me2.gantt.scroll_current();
+          (_b = (_a3 = me2.gantt).sync_header_to_grid) == null ? void 0 : _b.call(_a3);
         }
       });
-      this.setup_view_mode_buttons();
-      this.set_colors();
-    }
-    setup_view_mode_buttons() {
-      let $btn_group = this.$paging_area.find(".gantt-view-mode");
-      if ($btn_group.length > 0)
-        return;
-      const view_modes = this.gantt.options.view_modes || [];
-      const active_class = (view_mode) => this.gantt.view_is(view_mode) ? "btn-info" : "";
-      const html = `<div class="btn-group gantt-view-mode">
-				${view_modes.map(
-        (value) => `<button type="button"
-						class="btn btn-default btn-sm btn-view-mode ${active_class(value)}"
-						data-value="${value}">
-						${__(value)}
-					</button>`
-      ).join("")}
-			</div>`;
-      this.$paging_area.find(".level-left").append(html);
-      const change_view_mode = (value) => setTimeout(() => this.gantt.change_view_mode(value), 0);
-      this.$paging_area.on("click", ".btn-view-mode", (e) => {
-        const $btn = $(e.currentTarget);
-        this.$paging_area.find(".btn-view-mode").removeClass("btn-info");
-        $btn.addClass("btn-info");
-        const value = $btn.data().value;
-        change_view_mode(value);
+      footer.find(".view-mode-select").on("change", function() {
+        const mode = $(this).val();
+        if (me2.gantt && me2.gantt.change_view_mode) {
+          me2.gantt.change_view_mode(mode);
+          setTimeout(() => {
+            var _a3, _b;
+            return (_b = (_a3 = me2.gantt).sync_header_to_grid) == null ? void 0 : _b.call(_a3);
+          }, 0);
+        }
       });
     }
     set_colors() {
       const classes = this.tasks.map((t) => t.custom_class).filter((c) => c && c.startsWith("color-"));
+      if (classes.length === 0)
+        return;
       let style = classes.map((c) => {
         const class_name = c.replace("#", "");
         const bar_color = "#" + c.substr(6);
         const progress_color = frappe.ui.color.get_contrast_color(bar_color);
         return `
-				.gantt .bar-wrapper.${class_name} .bar {
-					fill: ${bar_color};
-				}
-				.gantt .bar-wrapper.${class_name} .bar-progress {
-					fill: ${progress_color};
-				}
-			`;
+					.gantt .bar-wrapper.${class_name} .bar {
+						fill: ${bar_color};
+					}
+					.gantt .bar-wrapper.${class_name} .bar-progress {
+						fill: ${progress_color};
+					}
+				`;
       }).join("");
-      style = `<style>${style}</style>`;
-      this.$result.prepend(style);
+      this.$result.prepend(`<style>${style}</style>`);
     }
     get_item(name) {
       return this.data.find((item) => item.name === name);
     }
+    setup_add_task_buttons() {
+      const me2 = this;
+      if (!this.gantt)
+        return;
+      this.gantt.create_frappe_task = function() {
+        me2.show_create_task_dialog();
+      };
+      this.setup_floating_add_button();
+    }
+    draw_svg_add_button() {
+      const me2 = this;
+      if (!this.gantt || !this.gantt.$svg)
+        return;
+      if (this.gantt.$add_task_circle) {
+        this.gantt.$add_task_circle.remove();
+      }
+      if (!this.gantt.bars || this.gantt.bars.length === 0)
+        return;
+      const lastBar = this.gantt.bars[this.gantt.bars.length - 1];
+      const lastTask = lastBar.task;
+      const circleY = this.gantt.config.header_height + this.gantt.options.padding / 2 + (lastTask._index + 1) * (this.gantt.options.bar_height + this.gantt.options.padding) + this.gantt.options.bar_height / 2;
+      const circleX = this.gantt.options.padding + 15;
+      const radius = 12;
+      const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      group.setAttribute("class", "add-task-circle");
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", circleX);
+      circle.setAttribute("cy", circleY);
+      circle.setAttribute("r", radius);
+      circle.setAttribute("class", "add-task-circle-bg");
+      const hLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      hLine.setAttribute("x1", circleX - 6);
+      hLine.setAttribute("y1", circleY);
+      hLine.setAttribute("x2", circleX + 6);
+      hLine.setAttribute("y2", circleY);
+      hLine.setAttribute("class", "add-task-plus");
+      const vLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      vLine.setAttribute("x1", circleX);
+      vLine.setAttribute("y1", circleY - 6);
+      vLine.setAttribute("x2", circleX);
+      vLine.setAttribute("y2", circleY + 6);
+      vLine.setAttribute("class", "add-task-plus");
+      group.appendChild(circle);
+      group.appendChild(hLine);
+      group.appendChild(vLine);
+      this.gantt.$svg.appendChild(group);
+      this.gantt.$add_task_circle = group;
+      group.addEventListener("click", () => {
+        me2.show_create_task_dialog();
+      });
+    }
+    setup_floating_add_button() {
+      const me2 = this;
+      console.log("\u{1F527} Setting up floating button...");
+      const existing = document.querySelectorAll(".gantt-add-task-floating");
+      existing.forEach((btn) => {
+        btn.remove();
+        console.log("\u{1F5D1}\uFE0F Removed existing button");
+      });
+      const button = document.createElement("button");
+      button.className = "gantt-add-task-floating";
+      button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" style="width: 24px; height: 24px;">
+            <line x1="12" y1="5" x2="12" y2="19" stroke-width="3" stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+    `;
+      button.style.cssText = `
+        position: fixed !important;
+        bottom: 30px !important;
+        right: 30px !important;
+        width: 56px !important;
+        height: 56px !important;
+        background: #2490ef !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 50% !important;
+        cursor: pointer !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        transition: all 0.3s ease !important;
+    `;
+      button.title = __("Add New Task");
+      button.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("\u2705 Add button clicked");
+        me2.show_create_task_dialog();
+      });
+      button.addEventListener("mouseenter", () => {
+        button.style.background = "#1976d2";
+        button.style.transform = "scale(1.1)";
+      });
+      button.addEventListener("mouseleave", () => {
+        button.style.background = "#2490ef";
+        button.style.transform = "scale(1)";
+      });
+      document.body.appendChild(button);
+      console.log("\u2705 Floating button added to body");
+      setTimeout(() => {
+        const check = document.querySelector(".gantt-add-task-floating");
+        if (check) {
+          console.log("\u2705 Button confirmed in DOM");
+        } else {
+          console.error("\u274C Button not found in DOM!");
+        }
+      }, 100);
+    }
+    show_create_task_dialog() {
+      const me2 = this;
+      const field_map = this.calendar_settings.field_map;
+      const default_start = this.get_default_start_date();
+      const default_end = this.get_default_end_date();
+      const dialog = new frappe.ui.Dialog({
+        title: __("Create New Task"),
+        fields: [
+          {
+            fieldtype: "Data",
+            fieldname: "title",
+            label: __(frappe.model.unscrub(field_map.title || "Title")),
+            reqd: 1
+          },
+          {
+            fieldtype: "Column Break"
+          },
+          {
+            fieldtype: "Date",
+            fieldname: "start_date",
+            label: __(frappe.model.unscrub(field_map.start || "Start Date")),
+            default: default_start,
+            reqd: 1
+          },
+          {
+            fieldtype: "Date",
+            fieldname: "end_date",
+            label: __(frappe.model.unscrub(field_map.end || "End Date")),
+            default: default_end,
+            reqd: 1
+          },
+          {
+            fieldtype: "Section Break"
+          },
+          {
+            fieldtype: "Int",
+            fieldname: "progress",
+            label: __("Progress (%)"),
+            default: 0,
+            description: __("Task completion percentage (0-100)")
+          },
+          {
+            fieldtype: "Column Break"
+          },
+          {
+            fieldtype: "Link",
+            fieldname: "depends_on",
+            label: __("Depends On"),
+            options: this.doctype,
+            description: __("Select a task this depends on")
+          },
+          {
+            fieldtype: "Link",
+            fieldname: "project",
+            label: __("Project"),
+            options: "Project",
+            description: __("Select The Project")
+          },
+          {
+            fieldtype: "Link",
+            fieldname: "parent_task",
+            label: __("Parent Task"),
+            options: this.doctype,
+            description: __("Select The Parent Task")
+          }
+        ],
+        primary_action_label: __("Create Task"),
+        primary_action: (values) => {
+          if (values.end_date < values.start_date) {
+            frappe.msgprint(__("End date cannot be before start date"));
+            return;
+          }
+          if (values.progress < 0 || values.progress > 100) {
+            frappe.msgprint(__("Progress must be between 0 and 100"));
+            return;
+          }
+          me2.create_new_task(values);
+          dialog.hide();
+        }
+      });
+      dialog.show();
+    }
+    get_default_start_date() {
+      if (this.gantt && this.gantt.tasks && this.gantt.tasks.length > 0) {
+        const lastTask = this.gantt.tasks[this.gantt.tasks.length - 1];
+        const lastEnd = moment(lastTask.end);
+        return lastEnd.add(1, "day").format("YYYY-MM-DD");
+      }
+      return frappe.datetime.now_date();
+    }
+    get_default_end_date() {
+      const startDate = this.get_default_start_date();
+      return moment(startDate).add(7, "days").format("YYYY-MM-DD");
+    }
+    on_remove() {
+      console.log("\u{1F9F9} Cleaning up Gantt view...");
+      const buttons = document.querySelectorAll(".gantt-add-task-floating");
+      buttons.forEach((btn) => {
+        btn.remove();
+        console.log(" Floating button removed");
+      });
+      if (this._keydownHandler) {
+        document.removeEventListener("keydown", this._keydownHandler);
+      }
+      if (super.on_remove) {
+        super.on_remove();
+      }
+    }
+    create_new_task(values) {
+      const me2 = this;
+      const field_map = this.calendar_settings.field_map;
+      const new_doc = {
+        doctype: this.doctype,
+        [field_map.title]: values.title,
+        [field_map.start]: values.start_date,
+        [field_map.end]: values.end_date
+      };
+      if (field_map.progress && !$.isFunction(field_map.progress)) {
+        new_doc[field_map.progress] = values.progress || 0;
+      }
+      if (values.depends_on) {
+        new_doc["depends_on_tasks"] = values.depends_on;
+      }
+      if (values.project) {
+        new_doc["project"] = values.project;
+      }
+      if (values.parent_task) {
+        new_doc["parent_task"] = values.parent_task;
+      }
+      frappe.show_alert({
+        message: __("Creating task..."),
+        indicator: "blue"
+      });
+      frappe.call({
+        method: "frappe.client.insert",
+        args: {
+          doc: new_doc
+        },
+        callback: (r) => {
+          if (r.message) {
+            frappe.show_alert({
+              message: __("Task {0} created successfully", [r.message.name]),
+              indicator: "green"
+            });
+            setTimeout(() => {
+              me2.refresh();
+            }, 500);
+          }
+        },
+        error: (err) => {
+          console.error("Error creating task:", err);
+          frappe.show_alert({
+            message: __("Error creating task"),
+            indicator: "red"
+          });
+        }
+      });
+    }
     get required_libs() {
-      return [
-        "assets/frappe/node_modules/frappe-gantt/dist/frappe-gantt.css",
-        "assets/frappe/node_modules/frappe-gantt/dist/frappe-gantt.min.js"
-      ];
+      return [];
     }
   };
 
@@ -9672,4 +10107,4 @@
 </div>
 `;
 })();
-//# sourceMappingURL=list.bundle.PV22YVUK.js.map
+//# sourceMappingURL=list.bundle.EGIXP63G.js.map

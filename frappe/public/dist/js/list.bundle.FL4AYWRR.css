@@ -1,0 +1,27 @@
+/* frappe/public/js/frappe/views/gantt/gantt_view.css */
+.gantt-add-task-floating svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+  pointer-events: none;
+}
+.gantt-add-task-floating svg path {
+  stroke: white;
+}
+.gantt .handle.left {
+  transform: translateX(-1px) skewX(-20deg) scaleX(1.5);
+}
+.gantt .handle.right {
+  transform: translateX(1px) skewX(20deg) scaleX(1.5);
+}
+.gantt .bar-wrapper:hover .handle {
+  fill: #666;
+  opacity: 1;
+}
+.gantt .handle {
+  opacity: 0;
+  cursor: ew-resize;
+  pointer-events: all;
+  transition: all 0.2s ease;
+}
+/*# sourceMappingURL=list.bundle.FL4AYWRR.css.map */
