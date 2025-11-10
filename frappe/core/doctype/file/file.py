@@ -844,6 +844,10 @@ def has_permission(doc, ptype=None, user=None, debug=False):
 
 	if user == "Administrator":
 		return True
+	
+	#adding  private file access for some user
+	if "file" in frappe.get_roles(user):
+		return True
 
 	if not doc.is_private and ptype in ("read", "select"):
 		return True
